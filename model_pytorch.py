@@ -201,7 +201,7 @@ class Torch_trainer:
         # Train loop
         for epoch in range(epoch_size):
             print('Epoch {}/{}     '.format(epoch, epoch_size - 1), end="", flush=True)
-
+            t1 = time.time()
             for phase in ['train', 'val']:
                 if phase == 'train':
                     model.train()  # Set model to training mode
@@ -274,6 +274,8 @@ class Torch_trainer:
                         break
 
             print()
+            t2 = time.time()
+            print(t2-t1)
             if early_stopping_flag:
                 break
 
@@ -348,7 +350,7 @@ if __name__ == '__main__':
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(network.parameters(), lr=1e-2)
 
-    trainer.set_early_stopping(monitor='val', patience=20)
+    trainer.set_early_stopping(monitor='val', patience=200)
 
     model_torch = trainer.fit(network, criterion, optimizer, epoch_size=1000)
     trainer.loss_plot()

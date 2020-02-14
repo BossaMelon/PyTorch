@@ -26,6 +26,7 @@ class Network(nn.Module):
         conv_layers = [8, 16, 32]
 
         kernel_size = 3
+        # same size after conv
         padding = (kernel_size - 1) // 2
         self.conv1 = nn.Conv2d(in_channels=self.data_channel, out_channels=conv_layers[0], kernel_size=kernel_size,
                                padding=padding)
@@ -41,7 +42,8 @@ class Network(nn.Module):
         self.max_pool = nn.MaxPool2d(2, stride=2)
 
         # calculate input and output shape of dense layer
-        self.dense_input = (self.data_height // 2 // 2 // 2) * (self.data_width // 2 // 2 // 2) * conv_layers[2]
+        # data go through maxpooling 3 times, so height and width "// 2" for 3 times
+        self.dense_input = (self.data_height // 2 // 2 // 2) * (self.data_width // 2 // 2 // 2) * conv_layers[-1]
         self.dense_output = self.data_height * self.data_width
 
         # dense layer
@@ -78,7 +80,6 @@ class Network(nn.Module):
         return t
 
 
-
 class Torch_trainer:
     def __init__(self):
 
@@ -103,11 +104,15 @@ class Torch_trainer:
 
         self._device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def create_torch_tensor(self, X, y):
+    def create_torch_tensor(self, X, y=None):
         # reshape and specify dtype
+        # numpy tensor: [B,H,W,C] to torch tensor: [B,C,H,W]
         X_torch = torch.tensor(X.transpose(0, 3, 1, 2), dtype=torch.float32)
-        y_torch = torch.tensor(y, dtype=torch.float32)
-        return X_torch, y_torch
+        if y is not None:
+            y_torch = torch.tensor(y, dtype=torch.float32)
+            return X_torch, y_torch
+        else:
+            return X_torch
 
     """""
     simple data set can directly create with torch.tensor(), it needs to load all the data to the memory.
@@ -161,13 +166,14 @@ class Torch_trainer:
             raise ValueError('only train, val or test')
 
     def create_model(self, show_summary=False):
+        # summary: pip install torchsummary
         data_shape = self._X_shape
         self._network = Network(data_shape).to(self._device)
         if show_summary:
             summary(self._network, input_size=data_shape[-3:])
         return self._network
 
-    def fit(self, model, criterion, optimizer, epoch_size):
+    def fit(self, model, criterion, optimizer, epoch_size, show_time=False):
         # model = self._network
         # optimizer = self._set_optimizer(optimizer, lr)
         # criterion = self._set_criterion(criterion)
@@ -201,8 +207,9 @@ class Torch_trainer:
         # Train loop
         for epoch in range(epoch_size):
             print('Epoch {}/{}     '.format(epoch, epoch_size - 1), end="", flush=True)
-            t1 = time.time()
+            epoch_start = time.time()
             for phase in ['train', 'val']:
+
                 if phase == 'train':
                     model.train()  # Set model to training mode
                     dataloader = self._dataloader_train
@@ -254,9 +261,6 @@ class Torch_trainer:
                         epochs_no_improve_val += 1
 
                     if epochs_no_improve_val == self._n_epochs_stop_val:
-                        print()
-                        print()
-                        print('early stopping!')
                         early_stopping_flag = True
                         break
 
@@ -267,19 +271,22 @@ class Torch_trainer:
                         epochs_no_improve_train += 1
 
                     if epochs_no_improve_train == self._n_epochs_stop_train:
-                        print()
-                        print()
-                        print('early stopping!')
                         early_stopping_flag = True
                         break
 
-            print()
-            t2 = time.time()
-            print(t2-t1)
+            epoch_end = time.time()
+            if show_time:
+                print('epoch time: {}'.format(epoch_end - epoch_start))
+            else:
+                print()
+
             if early_stopping_flag:
+                print(64 * '-')
+                print('early stopping!')
                 break
 
         time_elapsed = time.time() - since
+        print(64 * '-')
         print('Training complete in {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
         print('Best val Loss: {:4f}'.format(best_loss_val))
@@ -292,24 +299,12 @@ class Torch_trainer:
     def _get_loss(self):
         return self._train_losses, self._val_losses
 
-    def inference(self, X_test=None, model=None):
+    def inference(self, X_test, model=None):
+        X_test_torch = self.create_torch_tensor(X_test)
         if model is None:
             model = self._model
-
-        if X_test is None:
-            if self._X_test is None:
-                raise ValueError('No test set defined')
-            y_pred = model(self._X_test).detach().numpy()
-            return y_pred
-        elif X_test.__class__.__name__ == 'ndarray':
-            X_test_torch = torch.tensor(X_test.transpose(0, 3, 1, 2), dtype=torch.float32)
-            y_pred = model(X_test_torch).detach().numpy()
-            return y_pred
-        elif X_test.__class__.__name__ == 'Tensor':
-            y_pred = model(X_test).detach().numpy()
-            return y_pred
-        else:
-            raise ValueError('data type can only be numpy array or torch tensor')
+        y_pred = model(X_test_torch).detach().numpy()
+        return y_pred
 
     def loss_plot(self):
         train_losses, val_losses = self._get_loss()
@@ -329,16 +324,18 @@ class Torch_trainer:
 
 if __name__ == '__main__':
     # Create fake data set
-    X_train = np.random.rand(992, 38, 30, 3)
-    y_train = np.random.rand(992, 1140)
-    X_val = np.random.rand(53, 38, 30, 3)
-    y_val = np.random.rand(53, 1140)
-    X_test = np.random.rand(589, 38, 30, 3)
-    y_test = np.random.rand(589, 1140)
+    from sklearn.model_selection import train_test_split
+
+    X = np.random.rand(1000, 38, 30, 3)
+    y = np.random.rand(1000, 1140)
+
+    # train, val and test: 0.8, 0.1, 0.1
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_test, X_val, y_test, y_val = train_test_split(X_test, y_test, test_size=0.5)
 
     trainer = Torch_trainer()
 
-    dataset_train = trainer.create_torch_dataset(X_train,y_train)
+    dataset_train = trainer.create_torch_dataset(X_train, y_train)
     dataset_val = trainer.create_torch_dataset(X_val, y_val)
     dataset_test = trainer.create_torch_dataset(X_test, y_test)
 

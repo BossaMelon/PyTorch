@@ -8,10 +8,6 @@ from sklearn.model_selection import train_test_split
 from models import create_conv_ad_model
 from models import plot_keras_history
 
-from tensorflow.python.keras import Input, callbacks
-from tensorflow.python.keras.layers import Conv2D, MaxPooling2D, Flatten, Dropout, Dense
-from tensorflow.python.keras.models import Model
-from tensorflow.python.keras import optimizers
 
 X = np.random.rand(1000, 38, 30, 3)
 y = np.random.rand(1000, 1140)
@@ -35,21 +31,20 @@ def torch_tester(n):
     criterion = torch.nn.MSELoss()
     optimizer = torch.optim.Adam(network.parameters(), lr=1e-2)
 
+    t1 = time.time()
     trainer.fit(network, criterion, optimizer, epoch_size=n)
-
+    t2 = time.time()
+    return t2-t1
 
 def keras_tester(n):
     model_keras, encoder = create_conv_ad_model(input_shape=X_train.shape[1:])
+    t1 = time.time()
     model_keras.fit(X_train, y_train, epochs=n, batch_size=64, validation_data=(X_val, y_val), verbose=2)
-
+    t2 = time.time()
+    return t2 - t1
 
 if __name__ == '__main__':
-    n = 500
-    t1 = time.time()
-    torch_tester(n)
-    t2 = time.time()
-    keras_tester(n)
-    t3 = time.time()
-
-    print(64 * '-')
-    print('torch: {}  keras: {}'.format(t2 - t1, t3 - t2))
+    n = 200
+    t_torch = torch_tester(n)
+    t_keras = keras_tester(n)
+    print('torch: {}, keras: {}'.format(t_torch, t_keras))

@@ -341,7 +341,7 @@ if __name__ == '__main__':
 
     trainer.set_dataset(dataset_train, dataset_val, dataset_test)
 
-    trainer.set_dataloader(batch_size_train=64)
+    trainer.set_dataloader(batch_size_train=64, num_workers=2)
 
     network = trainer.create_model(show_summary=True)
     criterion = torch.nn.MSELoss()

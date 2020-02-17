@@ -122,8 +122,6 @@ class Torch_trainer:
     def create_torch_dataset(self, X, y):
         X_torch, y_torch = self.create_torch_tensor(X, y)
         dataset = Data.TensorDataset(X_torch, y_torch)
-        self._X_shape = X_torch.shape[1:]
-        self._y_shape = y_torch.shape[1:]
         return dataset
 
     def set_dataset(self, dataset_train, dataset_val, dataset_test=None):
@@ -131,6 +129,8 @@ class Torch_trainer:
         self._dataset_val = dataset_val
         if dataset_test is not None:
             self._dataset_test = dataset_test
+        self._X_shape = dataset_train.dataset.tensors[0].shape[1:]
+        self._y_shape = dataset_train.dataset.tensors[1].shape[1:]
 
     def get_dataset(self, dataset='train'):
         if dataset == 'train':

@@ -645,7 +645,10 @@ class Torch_trainer_classification:
                         outputs = model(inputs)
                         # preds is index of the max value
                         _, preds = torch.max(outputs, 1)
-
+                        print('-----')
+                        print(preds)
+                        print()
+                        print(labels)
                         loss = criterion(outputs, labels)
 
                         # backward + optimize only in training phase

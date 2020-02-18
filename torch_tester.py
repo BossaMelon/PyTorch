@@ -89,7 +89,7 @@ def classification_test():
     dataset_test = trainer.create_torch_dataset(X_test, y_test)
 
     trainer.set_dataset_(train_set, val_set)
-    trainer.set_dataloader(batch_size_train=100)
+    trainer.set_dataloader(batch_size_train=10)
 
     network = trainer.create_model(Network_classification, show_summary=True)
     criterion = torch.nn.CrossEntropyLoss()

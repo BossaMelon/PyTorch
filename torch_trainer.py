@@ -660,12 +660,14 @@ class Torch_trainer_classification:
                     running_loss += loss.item() * inputs.size(0)
                     running_corrects += torch.sum(preds == labels.data)
 
+
                 # if phase == 'train':
                 #     scheduler.step()
 
                 epoch_loss = running_loss / dataset_size
                 epoch_acc = running_corrects / dataset_size
-
+                print(running_corrects)
+                
                 print('{} Loss: {:.4f}     {} Acc: {:.4f}     '.format(phase, epoch_loss, phase, epoch_acc), end="", flush=True)
 
                 if phase == 'train':

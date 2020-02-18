@@ -645,7 +645,7 @@ class Torch_trainer_classification:
                         outputs = model(inputs)
                         # preds is index of the max value
                         _, preds = torch.max(outputs, 1)
-                   
+
                         loss = criterion(outputs, labels)
 
                         # backward + optimize only in training phase
@@ -662,8 +662,7 @@ class Torch_trainer_classification:
                 #     scheduler.step()
 
                 epoch_loss = running_loss / dataset_size
-                epoch_acc = running_corrects / dataset_size
-                print(running_corrects)
+                epoch_acc = running_corrects.double() / dataset_size
 
                 print('{} Loss: {:.4f}     {} Acc: {:.4f}     '.format(phase, epoch_loss, phase, epoch_acc), end="", flush=True)
 
